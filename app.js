@@ -4,8 +4,9 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var session = require('cookie-session');
 var LinkedInStrategy = require('passport-linkedin-oauth2').Strategy;
-var passport = require('passport')
+var passport = require('passport');
 require('dotenv').load()
 
 var routes = require('./routes/index');
@@ -25,18 +26,22 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// app.use(express.session());
 app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(session({
+  name: 'session',
+  keys: ['key1', 'key2']
+})) 
 
 passport.use(new LinkedInStrategy({
   clientID: process.env.LINKEDIN_CLIENT_ID,
   clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
   callbackURL: process.env.HOST + "/auth/linkedin/callback",
   scope: ['r_emailaddress', 'r_basicprofile'],
-}, 
-
-// Didn't explicitly say to make this change in the repo
-// But it show's it in the code.
-function(accessToken, refreshToken, profile, done) {
+  state: true,
+}, function(accessToken, refreshToken, profile, done) {
   done(null, {id: profile.id, displayName: profile.displayName, token: accessToken})
   }
 ));
@@ -52,7 +57,7 @@ function(accessToken, refreshToken, profile, done) {
 // }));
 
 app.get('/auth/linkedin',
-  passport.authenticate('linkedin', { state: 'SOME STATE'  }),
+  passport.authenticate('linkedin'),
   function(req, res){
     // The request will be redirected to LinkedIn for authentication, so this
     // function will not be called.
